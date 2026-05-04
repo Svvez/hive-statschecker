@@ -31,7 +31,7 @@ from card_generator import generate_stats_card, generate_profile_card, generate_
 
 # ── Config ────────────────────────────────────────────────────────────────────
 BOT_TOKEN      = os.environ.get("BOT_TOKEN", "")
-CHANNEL_ID     = int(os.environ.get("CHANNEL_ID", "0"))
+CHANNEL_ID     = int(os.environ.get("CHANNEL_ID") or "0")
 CHECK_INTERVAL = int(os.environ.get("CHECK_INTERVAL", "120"))  # aumentado para poupar rate limit
 API_KEY        = os.environ.get("HIVE_API_KEY", "")
 MAX_PLAYERS    = 10
