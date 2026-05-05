@@ -35,7 +35,7 @@ CHANNEL_ID     = int(os.environ.get("CHANNEL_ID") or "0")
 CHECK_INTERVAL = int(os.environ.get("CHECK_INTERVAL", "120"))  # aumentado para poupar rate limit
 API_KEY        = os.environ.get("HIVE_API_KEY", "")
 MAX_PLAYERS    = 10
-LB_INTERVAL    = 300
+LB_INTERVAL    = 600  # 10 min — evita rate limit do Discord por burst de mensagens
 API_BASE       = "https://api.playhive.com/v0"
 
 # ── Colors ────────────────────────────────────────────────────────────────────
@@ -398,8 +398,29 @@ async def fetch_parkour(session, player):
 # ── API: Leaderboards ─────────────────────────────────────────────────────────
 async def fetch_leaderboard(session, gamemode, amount=10, skip=0):
     api_key = GAMEMODES[gamemode]["api"]
-    return await _get_data(session,
+    entries = await _get_data(session,
         f"{API_BASE}/game/all/{api_key}?amount={amount}&skip={skip}")
+    if not entries or not isinstance(entries, list):
+        return entries
+    # All-time LB returns UUID but no username — resolve each UUID to a gamertag
+    # via /player/{uuid} which returns username_cc
+    tasks = []
+    for entry in entries:
+        if "username" not in entry and entry.get("UUID"):
+            tasks.append(_resolve_uuid(session, entry))
+        else:
+            tasks.append(asyncio.sleep(0))  # no-op placeholder
+    await asyncio.gather(*tasks)
+    return entries
+
+async def _resolve_uuid(session, entry):
+    """Fetch profile by UUID and inject username into the entry dict."""
+    uuid = entry.get("UUID", "")
+    profile = await _get_data(session, f"{API_BASE}/player/{quote(uuid, safe='')}")
+    if profile:
+        entry["username"] = profile.get("username_cc") or profile.get("username") or uuid[:8]
+    else:
+        entry["username"] = uuid[:8]  # fallback: first 8 chars of UUID
 
 async def fetch_monthly_lb(session, gamemode, amount=50, year=None, month=None):
     if not GAMEMODES[gamemode].get("has_monthly"):
@@ -448,7 +469,11 @@ async def fetch_title_catalogue(session, limit=50, offset=0):
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def sg(data, key):
-    return data.get(key, 0) if data else 0
+    if not data:
+        return 0
+    if key == "losses" and "losses" not in data:
+        return max(0, data.get("played", 0) - data.get("victories", 0))
+    return data.get(key, 0)
 
 def kdr(data):
     k, d = sg(data, "kills"), sg(data, "deaths")
@@ -518,10 +543,10 @@ def build_notification_embed(player, gamemode, new, old):
 
 def _build_top10_embed(gamemode, new_lb, old_lb):
     gm        = GAMEMODES[gamemode]
-    old_names = {e.get("human_index", e.get("username", "")).lower() for e in old_lb}
+    old_names = {_lb_name(e).lower() for e in old_lb}
     lines     = []
     for i, entry in enumerate(new_lb):
-        name   = entry.get("human_index", entry.get("username", "Unknown"))
+        name   = _lb_name(entry)
         streak = sg(entry, "win_streak")
         wins   = sg(entry, "victories")
         badge  = "  ← **new**" if name.lower() not in old_names else ""
@@ -637,19 +662,32 @@ async def leaderboard_loop():
     for gamemode in GAMEMODES:
         new_lb = await fetch_leaderboard(_session, gamemode, amount=10)
         if not new_lb or not isinstance(new_lb, list):
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
             continue
-        old_lb     = get_lb_cache(gamemode)
-        old_names  = {e.get("human_index", e.get("username", "")).lower() for e in old_lb}
+        old_lb    = get_lb_cache(gamemode)
+        old_names = {e.get("human_index", e.get("username", "")).lower() for e in old_lb}
         new_entries = [e for e in new_lb
                        if e.get("human_index", e.get("username", "")).lower() not in old_names]
-        if new_entries:
+        if new_entries and old_lb:
+            # Só alerta se ja havia cache -- evita burst de 16 msgs no primeiro boot
             save_lb_cache(gamemode, new_lb)
             try:
                 await channel.send(embed=_build_top10_embed(gamemode, new_lb, old_lb))
+                await asyncio.sleep(3)  # guarda contra rate limit do Discord apos cada envio
+            except discord.HTTPException as e:
+                if e.status == 429:
+                    retry_after = float((e.response.headers or {}).get("Retry-After", 10))
+                    print(f"[RATE LIMIT] Discord LB -- aguardar {retry_after}s")
+                    await asyncio.sleep(retry_after)
+                else:
+                    print(f"[ERROR] LB send: {e}")
             except Exception as e:
                 print(f"[ERROR] LB send: {e}")
-        await asyncio.sleep(1)
+        elif not old_lb:
+            # Primeiro boot: popula cache silenciosamente, sem enviar mensagem
+            save_lb_cache(gamemode, new_lb)
+            print(f"[LB] Cache inicializado para {gamemode} ({len(new_lb)} entradas)")
+        await asyncio.sleep(2)  # pausa entre gamemodes para nao stressar o Discord
 
 # ═════════════════════════════════════════════════════════════════════════════
 #  HELPER: enviar card de stats
@@ -898,7 +936,7 @@ async def cmd_position(interaction: discord.Interaction,
             if lb and isinstance(lb, list):
                 pos = next(
                     (i + 1 for i, e in enumerate(lb)
-                     if e.get("human_index", e.get("username", "")).lower() == player.lower()),
+                     if _lb_name(e).lower() == player.lower()),
                     None
                 )
                 # Se não está no top 100, estimar pela posição de wins
@@ -1080,6 +1118,13 @@ async def cmd_compare(interaction: discord.Interaction,
     await interaction.followup.send(embed=embed)
 
 # ── /lb ───────────────────────────────────────────────────────────────────────
+def _lb_name(entry: dict) -> str:
+    """Extract player name from a leaderboard entry.
+    - All-time LB: has UUID + username (injected by fetch_leaderboard)
+    - Monthly LB:  has username (correctly capitalised) + human_index (a number)
+    """
+    return entry.get("username") or entry.get("username_cc") or entry.get("UUID", "?")[:8]
+
 @tree.command(name="lb", description="Leaderboard global (Top 100, com paginação)")
 @app_commands.describe(gamemode="Modo de jogo", amount="Nº de jogadores (máx 100)", page="Página")
 @app_commands.choices(gamemode=GAMEMODE_CHOICES)
@@ -1109,7 +1154,7 @@ async def cmd_lb(interaction: discord.Interaction,
         print(f"[ERROR] lb card: {e}")
         lines = []
         for i, entry in enumerate(lb[:20]):
-            name   = entry.get("human_index", entry.get("username", "?"))
+            name   = _lb_name(entry)
             streak = sg(entry, "win_streak")
             wins   = sg(entry, "victories")
             lines.append(f"`#{skip+i+1:03}`  `{name:<20}`  {streak} streak · {wins:,} wins")
