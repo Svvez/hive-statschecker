@@ -1,5 +1,5 @@
 """
-bot.py  —  Sniper 3.0  |  Hive Bedrock Stats Bot
+bot.py  —  Apex Stat Tracker  |  Hive Bedrock Stats Bot
 Melhorias vs v2:
   - Daily / Weekly stat tracking via snapshots locais
   - Activity API (ETag) para polling inteligente — reduz rate limit drasticamente
@@ -513,7 +513,7 @@ def build_notification_embed(player, gamemode, new, old):
         marker  = f"  `{diff_str(d)}`" if d != 0 else ""
         lines.append(f"`{'K/D Ratio':<20}` {k_new}{marker}")
     embed.add_field(name="Stats", value="\n".join(lines), inline=False)
-    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
     return embed
 
 def _build_top10_embed(gamemode, new_lb, old_lb):
@@ -531,7 +531,7 @@ def _build_top10_embed(gamemode, new_lb, old_lb):
         description="\n".join(lines),
         color=C_LB, timestamp=datetime.now(timezone.utc)
     )
-    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
     return embed
 
 # ── Bot setup ─────────────────────────────────────────────────────────────────
@@ -620,7 +620,7 @@ async def track_loop():
                         timestamp=datetime.now(timezone.utc)
                     )
                     embed.set_image(url="attachment://stats.png")
-                    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+                    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
                     await channel.send(file=file, embed=embed)
                 except Exception:
                     await channel.send(embed=build_notification_embed(player, gamemode, new, old))
@@ -691,7 +691,7 @@ async def send_stats_card(interaction, player, gm, timeframe="alltime", year=Non
         file  = discord.File(fp=io.BytesIO(img_bytes), filename="stats.png")
         embed = discord.Embed(color=0x0d1018, timestamp=datetime.now(timezone.utc))
         embed.set_image(url="attachment://stats.png")
-        embed.set_footer(text=f"Sniper 3.0  ·  {period_label}  ·  {ts()}")
+        embed.set_footer(text=f"Apex Stat Tracker  ·  {period_label}  ·  {ts()}")
         await interaction.followup.send(file=file, embed=embed)
     except Exception as e:
         print(f"[ERROR] card gen: {e}")
@@ -827,7 +827,7 @@ async def cmd_parkour(interaction: discord.Interaction, player: str = None):
                 value="\n".join(lines),
                 inline=False
             )
-    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
     await interaction.followup.send(embed=embed)
 
 # ── /costume ──────────────────────────────────────────────────────────────────
@@ -861,7 +861,7 @@ async def cmd_costume(interaction: discord.Interaction, player: str = None):
     embed.add_field(name="Hub Title",  value=costume_name or "Nenhum", inline=True)
     embed.add_field(name="Hat",        value=str(hat) if hat else "Nenhum", inline=True)
     embed.add_field(name="Hive+",      value="✅" if profile.get("paid_rank") else "❌", inline=True)
-    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
     await interaction.followup.send(embed=embed)
 
 # ── /position ─────────────────────────────────────────────────────────────────
@@ -922,7 +922,7 @@ async def cmd_position(interaction: discord.Interaction,
         pos_str = f"**#{pos}**" if isinstance(pos, int) else f"`{pos}`"
         lines.append(f"`{name:<22}` {pos_str}  ·  {wins:,} wins")
     embed.description = "\n".join(lines)
-    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
     await interaction.followup.send(embed=embed)
 
 # ── /profile ──────────────────────────────────────────────────────────────────
@@ -952,7 +952,7 @@ async def cmd_profile(interaction: discord.Interaction, player: str = None):
         file  = discord.File(fp=io.BytesIO(img_bytes), filename="profile.png")
         embed = discord.Embed(color=0x0d1018, timestamp=datetime.now(timezone.utc))
         embed.set_image(url="attachment://profile.png")
-        embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+        embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
         await interaction.followup.send(file=file, embed=embed)
     except Exception as e:
         print(f"[ERROR] profile card: {e}")
@@ -1006,7 +1006,7 @@ async def cmd_allstats(interaction: discord.Interaction, player: str = None):
             line += f" | {streak} streak"
         summary.append(line)
     embed.description = "\n".join(summary) if summary else "Sem dados disponíveis."
-    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
     await interaction.followup.send(embed=embed)
 
 # ── /compare ──────────────────────────────────────────────────────────────────
@@ -1076,7 +1076,7 @@ async def cmd_compare(interaction: discord.Interaction,
     embed.add_field(name=player1,  value="\n".join(p1_lines),    inline=True)
     embed.add_field(name="Stat",   value="\n".join(label_lines), inline=True)
     embed.add_field(name=player2,  value="\n".join(p2_lines),    inline=True)
-    embed.set_footer(text=f"Sniper 3.0  ·  **negrito** = mais alto  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  **negrito** = mais alto  ·  {ts()}")
     await interaction.followup.send(embed=embed)
 
 # ── /lb ───────────────────────────────────────────────────────────────────────
@@ -1103,7 +1103,7 @@ async def cmd_lb(interaction: discord.Interaction,
         file  = discord.File(fp=io.BytesIO(img_bytes), filename="lb.png")
         embed = discord.Embed(color=0x0d1018, timestamp=datetime.now(timezone.utc))
         embed.set_image(url="attachment://lb.png")
-        embed.set_footer(text=f"Sniper 3.0  ·  Página {page}  ·  {ts()}")
+        embed.set_footer(text=f"Apex Stat Tracker  ·  Página {page}  ·  {ts()}")
         await interaction.followup.send(file=file, embed=embed)
     except Exception as e:
         print(f"[ERROR] lb card: {e}")
@@ -1116,7 +1116,7 @@ async def cmd_lb(interaction: discord.Interaction,
         embed = discord.Embed(
             title=f"{GAMEMODES[gm]['name']} · Top {amount} (pág. {page})",
             description="\n".join(lines), color=C_LB, timestamp=datetime.now(timezone.utc))
-        embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+        embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
         await interaction.followup.send(embed=embed)
 
 # ── /monthlylb ────────────────────────────────────────────────────────────────
@@ -1151,7 +1151,7 @@ async def cmd_monthly_lb(interaction: discord.Interaction,
         title=f"{GAMEMODES[gm]['name']}  ·  Mensal  ·  {period}",
         description="\n".join(lines), color=C_CYAN, timestamp=datetime.now(timezone.utc)
     )
-    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
     await interaction.followup.send(embed=embed)
 
 # ── /monthlyavailable ─────────────────────────────────────────────────────────
@@ -1178,7 +1178,7 @@ async def cmd_monthly_available(interaction: discord.Interaction,
         title=f"{GAMEMODES[gm]['name']}  ·  Meses Disponíveis",
         description="\n".join(lines), color=C_INFO
     )
-    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
     await interaction.followup.send(embed=embed)
 
 # ── /monthlystats ─────────────────────────────────────────────────────────────
@@ -1227,7 +1227,7 @@ async def cmd_season(interaction: discord.Interaction, season: int = 1, amount: 
         title=f"BedWars  ·  Season {season}  ·  Top {amount}",
         description="\n".join(lines), color=C_LB, timestamp=datetime.now(timezone.utc)
     )
-    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
     await interaction.followup.send(embed=embed)
 
 # ── /seasonrank ───────────────────────────────────────────────────────────────
@@ -1255,7 +1255,7 @@ async def cmd_season_rank(interaction: discord.Interaction,
         description="\n".join(lines) or "Sem dados.", color=C_LB,
         timestamp=datetime.now(timezone.utc)
     )
-    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
     await interaction.followup.send(embed=embed)
 
 # ── /search ───────────────────────────────────────────────────────────────────
@@ -1280,7 +1280,7 @@ async def cmd_search(interaction: discord.Interaction, prefix: str):
         title=f"🔍 Resultados para \"{prefix}\"",
         description="\n".join(lines), color=C_INFO, timestamp=datetime.now(timezone.utc)
     )
-    embed.set_footer(text=f"Sniper 3.0  ·  {len(results)} resultado(s)  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {len(results)} resultado(s)  ·  {ts()}")
     await interaction.followup.send(embed=embed)
 
 # ── /globalstats ──────────────────────────────────────────────────────────────
@@ -1303,7 +1303,7 @@ async def cmd_global(interaction: discord.Interaction):
         title="🌍 Estatísticas Globais do Hive",
         description="\n".join(lines), color=C_CYAN, timestamp=datetime.now(timezone.utc)
     )
-    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
     await interaction.followup.send(embed=embed)
 
 # ── /maps ─────────────────────────────────────────────────────────────────────
@@ -1327,7 +1327,7 @@ async def cmd_maps(interaction: discord.Interaction,
         description="\n".join(lines) or "Sem mapas listados.",
         color=C_INFO, timestamp=datetime.now(timezone.utc)
     )
-    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
     await interaction.followup.send(embed=embed)
 
 # ── /meta ─────────────────────────────────────────────────────────────────────
@@ -1351,7 +1351,7 @@ async def cmd_meta(interaction: discord.Interaction,
         description=f"```json\n{preview}\n```",
         color=C_INFO, timestamp=datetime.now(timezone.utc)
     )
-    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
     await interaction.followup.send(embed=embed)
 
 # ── /link ─────────────────────────────────────────────────────────────────────
@@ -1427,7 +1427,7 @@ async def cmd_tracked(interaction: discord.Interaction):
         title=f"Jogadores em Tracking  ·  {len(TRACKED_PLAYERS)}/{MAX_PLAYERS}",
         description="\n".join(lines), color=C_INFO
     )
-    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
     await interaction.response.send_message(embed=embed)
 
 # ── /friendlb ─────────────────────────────────────────────────────────────────
@@ -1472,7 +1472,7 @@ async def cmd_friendlb(interaction: discord.Interaction,
         title=f"{GAMEMODES[gm]['name']}  ·  Friend LB  [{period_label}]",
         description="\n".join(lines), color=C_LB, timestamp=datetime.now(timezone.utc)
     )
-    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
     await interaction.response.send_message(embed=embed)
 
 # ── /snapshot ─────────────────────────────────────────────────────────────────
@@ -1515,14 +1515,14 @@ async def cmd_gms(interaction: discord.Interaction):
         title="Modos de Jogo Disponíveis",
         description="\n".join(lines), color=C_INFO
     )
-    embed.set_footer(text=f"Sniper 3.0  ·  {ts()}")
+    embed.set_footer(text=f"Apex Stat Tracker  ·  {ts()}")
     await interaction.response.send_message(embed=embed)
 
 # ── /help ─────────────────────────────────────────────────────────────────────
 @tree.command(name="help", description="Ver todos os comandos")
 async def cmd_help(interaction: discord.Interaction):
     embed = discord.Embed(
-        title="Sniper 3.0 — Comandos",
+        title="Apex Stat Tracker — Comandos",
         color=C_INFO, timestamp=datetime.now(timezone.utc)
     )
     embed.add_field(name="📊 Stats por Gamemode", value=(
@@ -1564,7 +1564,7 @@ async def cmd_help(interaction: discord.Interaction):
         "`/tracked` — Ver jogadores em tracking\n"
         "`/snapshot [daily|weekly]` — Forçar snapshot manual"
     ), inline=False)
-    embed.set_footer(text="Sniper 3.0  ·  Hive Bedrock Stats")
+    embed.set_footer(text="Apex Stat Tracker  ·  Hive Bedrock Stats")
     await interaction.response.send_message(embed=embed)
 
 # ── Ready ─────────────────────────────────────────────────────────────────────
