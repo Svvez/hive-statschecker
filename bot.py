@@ -395,6 +395,9 @@ async def fetch_stats(session, player, gamemode, timeframe="alltime", year=None,
 async def fetch_parkour(session, player):
     return await _get_data(session, f"{API_BASE}/game/all/parkour/{quote(player, safe='')}")
 
+# ── UUID -> username cache (in-memory, persists for the bot session) ──────────
+_uuid_name_cache: dict = {}
+
 # ── API: Leaderboards ─────────────────────────────────────────────────────────
 async def fetch_leaderboard(session, gamemode, amount=10, skip=0):
     api_key = GAMEMODES[gamemode]["api"]
@@ -402,25 +405,33 @@ async def fetch_leaderboard(session, gamemode, amount=10, skip=0):
         f"{API_BASE}/game/all/{api_key}?amount={amount}&skip={skip}")
     if not entries or not isinstance(entries, list):
         return entries
-    # All-time LB returns UUID but no username — resolve each UUID to a gamertag
-    # via /player/{uuid} which returns username_cc
-    tasks = []
-    for entry in entries:
-        if "username" not in entry and entry.get("UUID"):
-            tasks.append(_resolve_uuid(session, entry))
-        else:
-            tasks.append(asyncio.sleep(0))  # no-op placeholder
-    await asyncio.gather(*tasks)
-    return entries
 
-async def _resolve_uuid(session, entry):
-    """Fetch profile by UUID and inject username into the entry dict."""
-    uuid = entry.get("UUID", "")
-    profile = await _get_data(session, f"{API_BASE}/player/{quote(uuid, safe='')}")
-    if profile:
-        entry["username"] = profile.get("username_cc") or profile.get("username") or uuid[:8]
-    else:
-        entry["username"] = uuid[:8]  # fallback: first 8 chars of UUID
+    # Debug: print first entry so we know what fields the API actually returns
+    if entries:
+        print(f"[LB] first entry keys: {list(entries[0].keys())}")
+        print(f"[LB] first entry: {entries[0]}")
+
+    # All-time LB returns UUID but no username.
+    # Resolve sequentially with cache + delay to avoid rate limits.
+    for entry in entries:
+        if "username" not in entry:
+            uuid = entry.get("UUID", "")
+            if not uuid:
+                entry["username"] = "?"
+                continue
+            if uuid in _uuid_name_cache:
+                entry["username"] = _uuid_name_cache[uuid]
+                continue
+            profile = await _get_data(session, f"{API_BASE}/player/{quote(uuid, safe='')}")
+            if profile:
+                name = profile.get("username_cc") or profile.get("username") or uuid[:8]
+            else:
+                print(f"[LB] failed to resolve UUID: {uuid}")
+                name = uuid[:8]
+            _uuid_name_cache[uuid] = name
+            entry["username"] = name
+            await asyncio.sleep(0.2)  # avoid hammering profile endpoint
+    return entries
 
 async def fetch_monthly_lb(session, gamemode, amount=50, year=None, month=None):
     if not GAMEMODES[gamemode].get("has_monthly"):
